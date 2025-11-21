@@ -1,0 +1,121 @@
+\documentclass[a4paper,11pt]{article}
+
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{listings}
+\usepackage{graphicx}
+\usepackage{hyperref}
+
+\title{Practical Work 1: TCP File Transfer}
+\author{Nguy\~en Tr\!ọng B\'ach \\ Student ID: 23BI14057}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\section{Goal}
+
+The goal of this practical work is to implement a one-to-one file transfer
+application over TCP/IP in the command-line interface.  The system consists of
+one server and one client using the socket API in C.
+
+\section{Protocol Design}
+
+The protocol between client and server is very simple:
+
+\begin{enumerate}
+  \item The client establishes a TCP connection to the server.
+  \item The client sends a 4--byte unsigned integer in network byte order
+        representing the file size in bytes.
+  \item The client sends exactly \texttt{file\_size} bytes of file data.
+  \item The server receives the file size and then reads file data until all
+        bytes have been received.  The server writes the data to an output file.
+\end{enumerate}
+
+This design follows the classical client/server flow shown in the lecture
+slides: \texttt{socket()}, \texttt{bind()}, \texttt{listen()}, \texttt{accept()},
+\texttt{connect()}, \texttt{read()}, \texttt{write()}, and \texttt{close()}.
+
+\section{System Organisation}
+
+The system contains two programs:
+
+\begin{itemize}
+  \item \textbf{Server} (\texttt{server.c}): listens on a TCP port, accepts one
+        incoming connection and receives a file.
+  \item \textbf{Client} (\texttt{client.c}): connects to the server and sends a
+        file read from disk.
+\end{itemize}
+
+The compilation is managed by a simple \texttt{Makefile}.  Figure~\ref{fig:flow}
+summarises the control flow.
+
+\begin{figure}[h]
+  \centering
+  \begin{tabular}{p{0.45\textwidth}p{0.45\textwidth}}
+    \textbf{Client} & \textbf{Server} \\
+    \hline
+    \texttt{socket()} & \texttt{socket()} \\
+    \texttt{connect()} & \texttt{bind()}, \texttt{listen()}, \texttt{accept()} \\
+    send size, send data & recv size, recv data \\
+    \texttt{close()} & \texttt{close()}, \texttt{close()}
+  \end{tabular}
+  \caption{Client/server session for file transfer.}
+  \label{fig:flow}
+\end{figure}
+
+\section{Implementation Details}
+
+The main implementation points are:
+
+\begin{itemize}
+  \item Use of \texttt{setsockopt()} with \texttt{SO\_REUSEADDR} on the server
+        to avoid ``address already in use'' errors.
+  \item Use of \texttt{htonl()} and \texttt{ntohl()} to ensure the file size is
+        transmitted in network byte order.
+  \item A helper function \texttt{send\_all()} on the client to guarantee all
+        bytes are written to the socket.
+  \item A loop on the server side to receive chunks of data until the announced
+        file size is fully received.
+\end{itemize}
+
+Code snippets for the critical parts of the implementation are shown in
+Listings~\ref{lst:client} and \ref{lst:server}.
+
+\subsection*{Client Snippet}
+\begin{lstlisting}[language=C,caption={Sending the file size and data},label={lst:client}]
+uint32_t file_size = (uint32_t)fsize;
+uint32_t size_net = htonl(file_size);
+send_all(sockfd, &size_net, sizeof(size_net));
+
+while ((nread = fread(buffer, 1, BUF_SIZE, fp)) > 0) {
+    send_all(sockfd, buffer, nread);
+}
+\end{lstlisting}
+
+\subsection*{Server Snippet}
+\begin{lstlisting}[language=C,caption={Receiving the file},label={lst:server}]
+uint32_t size_net;
+recv(connfd, &size_net, sizeof(size_net), MSG_WAITALL);
+uint32_t file_size = ntohl(size_net);
+
+while (received < file_size) {
+    size_t to_read = (file_size - received > BUF_SIZE)
+                   ? BUF_SIZE : file_size - received;
+    n = recv(connfd, buffer, to_read, 0);
+    fwrite(buffer, 1, n, fp);
+    received += n;
+}
+\end{lstlisting}
+
+\section{Work Division}
+
+This practical was done individually.  The tasks were:
+
+\begin{itemize}
+  \item Protocol design and system organisation.
+  \item Implementation of client and server in C.
+  \item Testing the application with different file sizes.
+  \item Writing this report in \LaTeX.
+\end{itemize}
+
+\end{document}
