@@ -1,0 +1,80 @@
+
+---
+
+## 4. LaTeX report: 03.mpi.file.transfer.tex
+
+`practicals/03-mpi-file-transfer/03.mpi.file.transfer.tex`
+
+```tex
+\documentclass[a4paper,11pt]{article}
+
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{listings}
+\usepackage{hyperref}
+
+\title{Practical Work 3: MPI File Transfer}
+\author{Nguyen Trong Bach \\ Student ID: 23BI14057}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\section{Introduction}
+This practical extends the TCP file transfer system by using the
+Message Passing Interface (MPI). Instead of sockets, processes
+communicate via MPI point-to-point operations. The goal is to
+implement a simple file transfer system using two MPI processes.
+
+\section{Choice of MPI Implementation}
+I chose to use a standard MPI implementation such as MPICH or
+OpenMPI because they are widely available, portable and compatible
+with the \texttt{mpicc} and \texttt{mpirun} tools provided in the
+course environment.
+
+\section{Design of the MPI Service}
+The system uses exactly two processes:
+\begin{itemize}
+  \item Rank 0: acts as the client. It reads the input file and sends
+  data chunks to rank 1.
+  \item Rank 1: acts as the server. It receives the chunks and writes
+  them to the output file.
+\end{itemize}
+
+Each chunk transfer consists of two messages: one for the chunk length
+and one for the data itself. A chunk length of zero is used as an
+End-of-File marker.
+
+\section{System Organization}
+The practical is organized in a single C program:
+\begin{itemize}
+  \item \texttt{mpi\_file\_transfer.c}: contains both client and server
+  logic, selected by the MPI rank.
+\end{itemize}
+
+The program is compiled with \texttt{mpicc} and executed using
+\texttt{mpirun -np 2}.
+
+\section{Implementation Snippet}
+Example code from the sender (rank 0):
+
+\begin{lstlisting}[language=C]
+while (1) {
+    int n = (int)fread(buffer, 1, CHUNK_SIZE, in);
+    MPI_Send(&n, 1, MPI_INT, 1, TAG_CHUNK_LEN, MPI_COMM_WORLD);
+    if (n == 0) break;
+    MPI_Send(buffer, n, MPI_UNSIGNED_CHAR, 1, TAG_CHUNK,
+             MPI_COMM_WORLD);
+}
+\end{lstlisting}
+
+\section{Group Work}
+This practical was completed individually.
+
+\section{Conclusion}
+By using MPI, the file transfer system no longer depends on TCP
+sockets. The communication is handled by MPI sends and receives,
+which simplifies some aspects of the networking code and makes it
+easier to scale to more processes in the future.
+
+\end{document}
