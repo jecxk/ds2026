@@ -1,0 +1,53 @@
+\documentclass[a4paper,11pt]{article}
+
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{listings}
+\usepackage{hyperref}
+
+\title{Practical Work 2: RPC File Transfer}
+\author{Nguyen Trong Bach \\ Student ID: 23BI14057}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\section{Introduction}
+This practical upgrades the TCP file transfer system from Practical Work 1 into an RPC-based system. Remote Procedure Call (RPC) allows a client to call functions on the server as if they were local. Python's XML-RPC module is used due to its simplicity and built-in support.
+
+\section{RPC Service Design}
+The RPC server exposes four methods:
+\begin{itemize}
+    \item \texttt{list\_files()} — lists available files
+    \item \texttt{upload\_file(filename, data)} — uploads a file
+    \item \texttt{download\_file(filename)} — returns file contents
+    \item \texttt{delete\_file(filename)} — removes a file
+\end{itemize}
+
+The architecture is shown in Figure~1.
+
+\section{System Organization}
+The system is organized into:
+\begin{enumerate}
+    \item \textbf{server.py}: RPC server implementing all file operations.
+    \item \textbf{client.py}: client application calling RPC functions.
+    \item \textbf{server\_storage/}: server-side directory storing files.
+\end{enumerate}
+
+\section{Implementation}
+Below is an example from the server:
+\begin{lstlisting}[language=Python]
+def upload_file(filename, data):
+    filepath = os.path.join(BASE_DIR, filename)
+    with open(filepath, "wb") as f:
+        f.write(data.data)
+    return True
+\end{lstlisting}
+
+\section{Group Work}
+This practical was completed individually.
+
+\section{Conclusion}
+RPC simplifies networking by allowing the client to use remote functions as if they were local. The implementation successfully upgrades the TCP-based solution to an RPC-based file transfer system.
+
+\end{document}
