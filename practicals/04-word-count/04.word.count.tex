@@ -1,0 +1,126 @@
+\documentclass[a4paper,11pt]{article}
+
+\usepackage[margin=2.5cm]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{listings}
+\usepackage{hyperref}
+
+\title{Practical Work 4: Word Count}
+\author{Nguyen Trong Bach \\ Student ID: 23BI14057}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\section{Introduction}
+This practical implements the classical Word Count example using
+a simple MapReduce style framework written in C++. Instead of using
+a full MapReduce system such as Hadoop, I design a minimal
+implementation with clearly separated \textbf{Mapper} and
+\textbf{Reducer} functions. The goal is to count how many times each
+word appears in an input text file.
+
+\section{Choice of Implementation}
+C++ is chosen for this practical because:
+\begin{itemize}
+  \item it is close to C and fits well with the previous practical works;
+  \item the Standard Library provides convenient containers such as
+  \texttt{std::map} to store key--value pairs;
+  \item the program can be compiled and executed easily on the course
+  environment using \texttt{g++}.
+\end{itemize}
+
+\section{Mapper and Reducer Design}
+
+\subsection*{Mapper}
+The Mapper is implemented by the function
+\texttt{map\_line(const std::string\&, std::map<std::string,int>\&)}.
+For each input line the Mapper:
+\begin{enumerate}
+  \item scans the line character by character;
+  \item groups sequences of alphabetic characters into words;
+  \item converts each word to lowercase to avoid case differences;
+  \item increases the local counter for that word in a local
+  map of type \texttt{std::map<std::string,int>}.
+\end{enumerate}
+In logical MapReduce terms, for every word the pair
+\texttt{(word, 1)} is produced and stored in the local map.
+
+\subsection*{Reducer}
+The Reducer is implemented by the function
+\texttt{reduce\_counts(const std::map<std::string,int>\&,
+std::map<std::string,int>\&)}. The Reducer receives a local map
+containing pairs of the form \texttt{(word, count)} and merges them
+into a global map:
+\begin{itemize}
+  \item for each key in the local map the corresponding value is added
+  to the value stored in the global map;
+  \item if the key does not exist in the global map yet, it is inserted
+  with the given count.
+\end{itemize}
+This behaviour is similar to the Reduce phase in MapReduce, where all
+values associated with the same key are combined.
+
+\section{System Organization}
+The whole Word Count system is contained in a single source file
+\texttt{word\_count.cpp}. The main program follows these steps:
+\begin{enumerate}
+  \item read the input file name and output file name from the command
+  line arguments;
+  \item open the input file and read it line by line;
+  \item for each line, call the Mapper to obtain local word counts;
+  \item call the Reducer to merge the local counts into a global map;
+  \item after all lines have been processed, write the global word
+  counts to the output file, one word per line.
+\end{enumerate}
+The output format is very simple: each line contains a word followed by
+its total count, for example:
+\begin{verbatim}
+apple  5
+banana 3
+\end{verbatim}
+
+\section{Implementation Snippet}
+The following listing shows the core part of the Mapper function:
+
+\begin{lstlisting}[language=C++]
+void map_line(const std::string &line,
+              std::map<std::string, int> &local_counts) {
+    std::string word;
+    for (char c : line) {
+        if (std::isalpha(static_cast<unsigned char>(c))) {
+            word.push_back(
+                static_cast<char>(std::tolower(
+                    static_cast<unsigned char>(c))));
+        } else {
+            if (!word.empty()) {
+                ++local_counts[word];
+                word.clear();
+            }
+        }
+    }
+    if (!word.empty()) {
+        ++local_counts[word];
+    }
+}
+\end{lstlisting}
+
+The Reducer simply iterates over the local map and adds all counts to
+the global map.
+
+\section{Group Work}
+This practical work was completed individually. I was responsible for
+designing the simple MapReduce style, implementing the C++ program and
+writing this report.
+
+\section{Conclusion}
+This practical demonstrates that the MapReduce programming model can be
+implemented even without a full framework. By separating the logic into
+Mapper and Reducer functions, the program mirrors the core ideas of
+MapReduce while remaining small and easy to understand. The same design
+could later be extended to run in parallel using multiple processes or
+machines.
+
+\end{document}
