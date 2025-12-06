@@ -1,0 +1,120 @@
+
+\documentclass[a4paper,11pt]{article}
+
+\usepackage[margin=2.5cm]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{listings}
+\usepackage{hyperref}
+
+\title{Practical Work 5: The Longest Path}
+\author{Nguyen Trong Bach \\ Student ID: 23BI14057}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\section{Introduction}
+This practical implements a small MapReduce style project called
+\emph{The Longest Path}. The goal is to analyse a set of text files
+where each line contains one full file path (for example, the output
+of the command \texttt{find /}) and to find the longest path or paths.
+Instead of using a full MapReduce framework, I design a simple
+MapReduce-like program in~C++.
+
+\section{Input and Output}
+\begin{itemize}
+  \item \textbf{Input}: a set of text files, each containing one full
+  file path per line. Each file can be considered as the data coming
+  from one laptop.
+  \item \textbf{Output}: the maximum path length and all paths whose
+  length is equal to that maximum.
+\end{itemize}
+
+\section{Mapper and Reducer Design}
+
+\subsection*{Mapper}
+Each input file is processed by a logical Mapper, implemented as the
+function \texttt{map\_file(const std::string\&)}. For a given file the
+Mapper:
+\begin{enumerate}
+  \item reads the file line by line;
+  \item for each non-empty line computes the length of the path
+  (number of characters);
+  \item keeps track of the current maximum length inside that file;
+  \item stores all paths whose length is equal to this local maximum.
+\end{enumerate}
+The Mapper returns a structure \texttt{MapResult} containing the local
+maximum length and the list of paths that achieve this length.
+
+\subsection*{Reducer}
+The Reducer is implemented by the function
+\texttt{reduce\_result(const MapResult\&, std::size\_t\&, std::vector<std::string>\&)}.
+It maintains two global variables: the global maximum length and the
+list of all paths that achieve this maximum. For each \texttt{MapResult}
+received from a Mapper the Reducer:
+\begin{itemize}
+  \item replaces the global result if the local maximum is larger;
+  \item appends the local paths if the local maximum is equal to the
+        global maximum;
+  \item ignores the local result if it is smaller.
+\end{itemize}
+This behaviour is analogous to MapReduce, where all partial results
+for the same key are combined in the Reduce phase.
+
+\section{System Organization}
+The whole system is implemented in a single source file
+\texttt{longest\_path.cpp}. The main program follows these steps:
+\begin{enumerate}
+  \item read the list of input file names from the command line;
+  \item for each file, call the Mapper \texttt{map\_file} to obtain a
+  \texttt{MapResult};
+  \item call the Reducer \texttt{reduce\_result} to combine all
+  \texttt{MapResult} objects into a global result;
+  \item after all files have been processed, print the global maximum
+  path length and the corresponding paths.
+\end{enumerate}
+
+\section{Implementation Snippet}
+An example excerpt from the Mapper function is shown below:
+
+\begin{lstlisting}[language=C++]
+MapResult map_file(const std::string &filename) {
+    MapResult result;
+    std::ifstream in(filename);
+    if (!in) {
+        std::cerr << "Cannot open input file: " << filename << "\n";
+        return result;
+    }
+
+    std::string line;
+    while (std::getline(in, line)) {
+        std::size_t len = line.size();
+        if (len == 0) continue;
+
+        if (len > result.max_len) {
+            result.max_len = len;
+            result.paths.clear();
+            result.paths.push_back(line);
+        } else if (len == result.max_len) {
+            result.paths.push_back(line);
+        }
+    }
+    return result;
+}
+\end{lstlisting}
+
+\section{Group Work}
+This practical work was completed individually. I was responsible for
+designing the Mapper and Reducer logic, implementing the C++ program
+and writing this report.
+
+\section{Conclusion}
+The Longest Path practical shows how the MapReduce idea can be applied
+to a different problem than Word Count. By clearly separating the
+Mapper and Reducer stages, the code is easy to understand and could
+later be extended to run in parallel using multiple processes or
+machines.
+
+\end{document}
